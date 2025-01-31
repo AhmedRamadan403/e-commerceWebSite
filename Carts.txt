@@ -1,0 +1,82 @@
+ public class TbCartStatus
+    {
+        [Key]
+        public string Id { get; set; }
+        public string Status { get; set; }
+
+        public virtual List<TbCart>? Carts { get; set;}
+    }
+=============================================================
+ public class TbCartProduct
+    {
+        public string CartId { get; set; }
+        public int ProductId { get; set; }
+        public int Product_Quantity { get; set; }
+        public DateTime InsertionData { get; set;}
+
+        public virtual TbCart? Cart { get; set; }
+        public virtual TbProduct? Product { get; set; }
+
+    }
+==============================================================
+ public class TbCart
+    {
+        [Key]
+        public string Id { get; set; }
+        public double Total_Price { get; set; }
+
+        [ForeignKey(nameof(User))]
+        public string UserId { get; set;}
+        [ForeignKey(nameof(CartStatus))]
+        public string CartStatusId { get; set; }
+
+
+
+        public virtual ApplicationUser User { get; set; }
+        public virtual TbCartStatus CartStatus { get; set; }
+        public virtual List<TbCartProduct>? TbCartProducts { get; set; }
+
+
+    }
+=================================================================
+modelBuilder.Entity<TbCartProduct>(option =>
+            {
+                option.Property(p => p.InsertionData).HasDefaultValueSql("GETDATE()");
+            });
+            modelBuilder.Entity<TbCartProduct>().HasKey(k=> new {k.ProductId ,k.CartId });
+            modelBuilder.Entity<TbCartProduct>().HasOne(c=>c.Cart)
+                                                .WithMany(cp=>cp.TbCartProducts)
+                                                .HasForeignKey(c=>c.CartId)
+                                                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<TbCartProduct>().HasOne(p => p.Product)
+                                                .WithMany(cp => cp.TbCartProducts)
+                                                .HasForeignKey(c => c.ProductId)
+                                                .OnDelete(DeleteBehavior.Restrict);
+===================================================================
+ public virtual DbSet<TbCart> TbCarts { get; set; }
+        public virtual DbSet<TbCartStatus> TbCartStatuses { get; set; }
+        public virtual DbSet<TbCartProduct> TbCartProducts { get; set; }
+================================================================================
+ TbProduct product = _productService.GetById(Id);
+            Claim IdClaim = User.Claims.FirstOrDefault(a => a.Type == ClaimTypes.NameIdentifier);
+            IEnumerable<string> StatusIds = _context.TbCartStatuses.Where(s => s.Status == "ISERTION").Select(i => i.Id).ToList();
+            TbCart? CurrentCart = _context.TbCarts.FirstOrDefault(u => u.UserId == IdClaim.Value && StatusIds.Contains(u.CartStatusId));
+            if (CurrentCart == null)
+            {
+                TbCartStatus NewcartStatus = new TbCartStatus() { Id = Guid.NewGuid().ToString(), Status = "ISERTION" };
+                _context.TbCartStatuses.Add(NewcartStatus);
+                TbCart Newcart = new TbCart()
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    UserId = IdClaim.Value,
+                    CartStatusId = NewcartStatus.Id,
+                    Total_Price = product.Price
+                };
+                _context.TbCarts.Add(Newcart);   
+            }
+            else
+            {
+                
+            }
+=======================================================================================================
